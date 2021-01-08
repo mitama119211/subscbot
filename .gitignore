@@ -1,0 +1,10 @@
+# general
+.eggs
+.python-version
+.vscode
+__pycache__
+*.egg-info
+venv
+
+milestone_log
+subscribers_log
