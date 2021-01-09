@@ -32,7 +32,7 @@ Youtubeチャンネル登録者数を取得しツイートする。
 
     ```
 
-2. chinfo.csvの作成
+2. chinfo.csv作成
 
     チャンネルID、ユーザ名、ディレクトリ名の情報を含むcsvファイルを作成。
     - chid: youtubeチャンネル固有のID。チャンネルトップのURLの`channel/`以下の部分。
@@ -47,7 +47,17 @@ Youtubeチャンネル登録者数を取得しツイートする。
     UCz6Gi81kE6p5cdW1rT0ixqw,もこ田めめめ,mokomeme_ch
     ```
 
-3. APIキーの設定
+3. API_KEY、API_KEY_SECRET、DEVELOPER_KEYを設定
 
-    - `set_apikey.sh`の`API_KEY=""`、`API_KEY_SECRET=""`にTwitter Developerアカウントで作成したアプリのAPI key、API key secretをそれぞれ記述。
-    また、`DEVELOPER_KEY=""`にYoutube Data APIのAPIキーを記述。
+    `set_apikeys.sh`の`API_KEY=""`、`API_KEY_SECRET=""`にTwitter Developerアカウントで作成したアプリのAPI key、API key secretをそれぞれ記述。
+    また、`DEVELOPER_KEY=""`にYoutube Data API v3のAPIキーを記述。
+
+4. authenticate.shを実行し、ACCESS_TOKEN、ACCESS_TOKEN_SECRETを取得
+  
+5. ACCESS_TOKEN、ACCESS_TOKEN_SECRETを設定
+    `set_apikeys.sh`の`ACCESS_TOKEN=""`、`ACCESS_TOKEN_SECRET=""`に取得した値をそれぞれ記述。
+
+## Reference
+
+- [API reference index — Twitter Developers](https://developer.twitter.com/en/docs/api-reference-index)
+- [Twitter REST APIの使い方](https://syncer.jp/Web/API/Twitter/REST_API/)
