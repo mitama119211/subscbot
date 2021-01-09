@@ -1,6 +1,6 @@
 #!/usr/bin/bash
-export CONSUMER_KEY=""
-export CONSUMER_SECRET=""
+export API_KEY=""
+export API_KEY_SECRET=""
 export ACCESS_TOKEN=""
 export ACCESS_TOKEN_SECRET=""
 

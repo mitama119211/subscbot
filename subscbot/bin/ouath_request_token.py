@@ -14,7 +14,7 @@ def request_token(
 
     params = {"oauth_callback": oauth_callback}
 
-    twitter = OAuth1Session(CONSUMER_KEY, CONSUMER_SECRET)
+    twitter = OAuth1Session(API_KEY, API_KEY_SECRET)
     response = twitter.post(resource_url, params=params)
 
     if response.status_code == 200:
@@ -37,7 +37,7 @@ def access_token(oauth_token, oauth_verifier):
 
     params = {"oauth_verifier": oauth_verifier}
 
-    twitter = OAuth1Session(CONSUMER_KEY, CONSUMER_SECRET, oauth_token, oauth_verifier)
+    twitter = OAuth1Session(API_KEY, API_KEY_SECRET, oauth_token, oauth_verifier)
     response = twitter.post(resource_url, params=params)
 
     if response.status_code == 200:
@@ -60,11 +60,11 @@ def main():
     parser.add_argument("--ouath_callback", type=str, default="http://twitter.com")
     args = parser.parse_args()
 
-    CONSUMER_KEY = os.environ.get("CONSUMER_KEY")
-    CONSUMER_SECRET = os.environ.get("CONSUMER_SECRET")
+    API_KEY = os.environ.get("API_KEY")
+    API_KEY_SECRET = os.environ.get("API_KEY_SECRET")
 
-    if CONSUMER_KEY is None or CONSUMER_SECRET is None:
-        raise RuntimeError("CONSUMER_KEY and CONSUMER_SECRET must be specified in environment variables.")
+    if API_KEY is None or API_KEY_SECRET is None:
+        raise RuntimeError("API_KEY and API_KEY_SECRET must be specified in environment variables.")
 
     # generate oauth url
     print(request_token(oauth_callback=args.oauth_callback))

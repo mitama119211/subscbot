@@ -15,10 +15,10 @@ Youtubeチャンネル登録者数を取得しツイートする。
 
 ## 事前に必要なもの
 
-- Twitter Developerアカウント
+- Twitter Developerアカウントとそのアプリ
   - Access token
   - Access token secret
-- Youtube Data APIのAPIキー
+- Youtube Data API v3のAPIキー
 
 ## セットアップ
 
@@ -46,3 +46,8 @@ Youtubeチャンネル登録者数を取得しツイートする。
     UCLhUvJ_wO9hOvv_yYENu4fQ,電脳少女シロ,SIROyoutuber
     UCz6Gi81kE6p5cdW1rT0ixqw,もこ田めめめ,mokomeme_ch
     ```
+
+3. APIキーの設定
+
+    - `set_apikey.sh`の`API_KEY=""`、`API_KEY_SECRET=""`にTwitter Developerアカウントで作成したアプリのAPI key、API key secretをそれぞれ記述。
+    また、`DEVELOPER_KEY=""`にYoutube Data APIのAPIキーを記述。
