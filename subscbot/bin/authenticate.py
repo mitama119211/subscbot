@@ -14,7 +14,7 @@ def get_arguments():
     """Get arguments."""
     parser = argparse.ArgumentParser(
         description="Generate ACCESS_TOKEN and ACCESS_TOKEN_SECRET.")
-    parser.add_argument("--oauth_callback", type=str, default="http://twitter.com",
+    parser.add_argument("--oauth_callback", type=str, required=True,
                         help="One of the Callback URLs configured in the Twitter App.")
     return parser.parse_args()
 

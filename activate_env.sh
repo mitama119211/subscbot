@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/usr/bin/env bash
 
 if [ -e ./env/venv/bin/activate ]; then
     # shellcheck disable=SC1091
