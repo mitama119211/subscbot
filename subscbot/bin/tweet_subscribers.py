@@ -70,7 +70,7 @@ def get_arguments():
     parser = argparse.ArgumentParser(description="Tweet the number of subscribers with text or an image.")
     parser.add_argument("--chinfo", type=str, required=True,
                         help="A csv file including channnel infomation.")
-    parser.add_argument("--log_root_path", type=str, required=True,
+    parser.add_argument("--log_root_path", type=str, default="subscribers_log",
                         help="Path to log directory to save the number of subscribers.")
     parser.add_argument("--tweet_type", type=str, required=True, choices=["text", "image"],
                         help="How to tweeet.")

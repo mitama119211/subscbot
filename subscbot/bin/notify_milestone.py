@@ -1,10 +1,14 @@
+"""CHeck and notify milestones."""
 import argparse
 import datetime
 import os
 
 import pandas as pd
 
-from subscbot.twitter_api import statuses_update
+from apiclient.discovery import build
+from requests_oauthlib import OAuth1Session
+
+from subscbot.twitter_api import update
 from subscbot.youtube_api import get_subscribers
 
 MILESTONE_L = 10000
@@ -16,7 +20,7 @@ def check_notified(chid_subsc_list, chinfo):
     """NOTE: Is this function needed?"""
     notifiedlog_filename = "notified.log"
 
-    notify_list = []
+    notified_list = []
     for chid, subscribers in chid_subsc_list:
         notifiedlog_path = chinfo[chinfo["chid"] == chid]["mslog_path"].values[0]
         notifiedlog_file = os.path.join(notifiedlog_path, notifiedlog_filename)
@@ -34,14 +38,15 @@ def check_notified(chid_subsc_list, chinfo):
                 prev_notified = int(f.read())
 
             if remain != -1 and prev_notified < (next_milestone-remain):
-                notify_list.append((chid, next_milestone, next_milestone-subscribers))
+                notified_list.append((chid, next_milestone, next_milestone-subscribers))
                 with open(notifiedlog_file, "w") as f:
                     f.write(str(next_milestone-remain))
 
-    return notify_list
+    return notified_list
 
 
 def check_milestone(chid_subsc_list, chinfo):
+    """Check whether the number of subscribers exceeds the milestone number."""
     mslog_filename = "milestone.log"
 
     milestone_list = []
@@ -67,9 +72,11 @@ def check_milestone(chid_subsc_list, chinfo):
 
 def get_arguments():
     """Get arguments."""
-    parser = argparse.ArgumentParser(description="Tweet the number of subscribers with text or an image.")
-    parser.add_argument("--chinfo", type=str, default="chinfo.csv")
-    parser.add_argument("--mslog_root_path", type=str, default="milestone_log")
+    parser = argparse.ArgumentParser(description="CHeck and notify milestones.")
+    parser.add_argument("--chinfo", type=str, required=True,
+                        help="A csv file including channnel infomation.")
+    parser.add_argument("--mslog_root_path", type=str, default="milestone_log",
+                        help="Path to log directory to save the milestone number.")
 
     return parser.parse_args()
 
@@ -81,7 +88,7 @@ def main():
 
     # load channel info
     # chinfo: (chid, name, dirname)
-    chinfo = pd.read_csv("chinfo.csv")
+    chinfo = pd.read_csv(args.chinfo)
 
     # check log dirctory existance
     mslog_root_path = args.mslog_root_path
@@ -98,15 +105,27 @@ def main():
     # set timestamp (YYYY-MM-DD_hh:mm:ss)
     timestamp = datetime_now.strftime("%Y-%m-%d_%H:%M:%S")
 
+    # Launch a session
+    YOUTUBE_API_SERVICE_NAME = "youtube"
+    YOUTUBE_API_VERSION = "v3"
+    DEVELOPER_KEY = os.environ.get("DEVELOPER_KEY")
+    youtube = build(YOUTUBE_API_SERVICE_NAME, YOUTUBE_API_VERSION, developerKey=DEVELOPER_KEY)
+
+    API_KEY = os.environ.get("API_KEY")
+    API_KEY_SECRET = os.environ.get("API_KEY_SECRET")
+    ACCESS_TOKEN = os.environ.get("ACCESS_TOKEN")
+    ACCESS_TOKEN_SECRET = os.environ.get("ACCESS_TOKEN_SECRET")
+    twitter = OAuth1Session(API_KEY, API_KEY_SECRET, ACCESS_TOKEN, ACCESS_TOKEN_SECRET)
+
     # get the number of subscribers
     chids = ",".join(chinfo["chid"])
-    chid_subsc_list = get_subscribers(chids)
+    chid_subsc_list = get_subscribers(youtube=youtube, chids=chids)
 
-    notify_list = check_notified(chid_subsc_list, chinfo=chinfo)
+    notified_list = check_notified(chid_subsc_list, chinfo=chinfo)
     milestone_list = check_milestone(chid_subsc_list, chinfo=chinfo)
 
     status_list = []
-    for chid, next_criterion, diff in notify_list:
+    for chid, next_criterion, diff in notified_list:
         name = chinfo[chinfo["chid"] == chid]["name"].values[0]
         status = f"{timestamp}\n"
         status += f"#{name} さんのチャンネル登録者数{next_criterion:,d}人まで残り{diff:,d}人です。"
@@ -118,7 +137,7 @@ def main():
         status += f"現在: {subscribers:,d}人"
         status_list.append(status)
     for status in status_list:
-        statuses_update(status)
+        update(twitter=twitter, status=status)
 
 
 if __name__ == "__main__":
