@@ -1,15 +1,17 @@
 """Tweet the number of subscribers with text or an image."""
 import argparse
 import datetime
-import logging
 import os
 
 import japanize_matplotlib
 import matplotlib.pyplot as plt
 import pandas as pd
 
-from subscbot.twitter_api import media_upload
-from subscbot.twitter_api import statuses_update
+from apiclient.discovery import build
+from requests_oauthlib import OAuth1Session
+
+from subscbot.twitter_api import update
+from subscbot.twitter_api import upload
 from subscbot.youtube_api import get_subscribers
 
 
@@ -66,9 +68,12 @@ def form_name(name, nmax=8):
 def get_arguments():
     """Get arguments."""
     parser = argparse.ArgumentParser(description="Tweet the number of subscribers with text or an image.")
-    parser.add_argument("--chinfo", type=str, default="chinfo.csv")
-    parser.add_argument("--log_root_path", type=str, default="subscribers_log")
-    parser.add_argument("--tweet_type", type=str, default="image")
+    parser.add_argument("--chinfo", type=str, required=True,
+                        help="A csv file including channnel infomation.")
+    parser.add_argument("--log_root_path", type=str, required=True,
+                        help="Path to log directory to save the number of subscribers.")
+    parser.add_argument("--tweet_type", type=str, required=True, choices=["text", "image"],
+                        help="How to tweeet.")
 
     return parser.parse_args()
 
@@ -97,10 +102,21 @@ def main():
     # set timestamp (YYYY-MM-DD_hh:mm:ss)
     timestamp = datetime_now.strftime("%Y-%m-%d_%H:%M:%S")
 
+    # Launch a session
+    YOUTUBE_API_SERVICE_NAME = "youtube"
+    YOUTUBE_API_VERSION = "v3"
+    DEVELOPER_KEY = os.environ.get("DEVELOPER_KEY")
+    youtube = build(YOUTUBE_API_SERVICE_NAME, YOUTUBE_API_VERSION, developerKey=DEVELOPER_KEY)
+
+    API_KEY = os.environ.get("API_KEY")
+    API_KEY_SECRET = os.environ.get("API_KEY_SECRET")
+    ACCESS_TOKEN = os.environ.get("ACCESS_TOKEN")
+    ACCESS_TOKEN_SECRET = os.environ.get("ACCESS_TOKEN_SECRET")
+    twitter = OAuth1Session(API_KEY, API_KEY_SECRET, ACCESS_TOKEN, ACCESS_TOKEN_SECRET)
+
     # get the number of subscribers
     chids = ",".join(chinfo["chid"])
-    chid_subsc_list = get_subscribers(chids)
-    # chid_subsc_list = [['UCLhUvJ_wO9hOvv_yYENu4fQ', 697000], ['UCz6Gi81kE6p5cdW1rT0ixqw', 153000], ['UC5nfcGkOAm3JwfPvJvzplHg', 111000], ['UCiGcHHHT3kBB1IGOrv7f3qQ', 105000], ['UC6TyfKcsrPwBsBnx2QobVLQ', 104000], ['UC1519-d1jzGiL1MPTxEdtSA', 103000], ['UCP9ZgeIJ3Ri9En69R0kJc9Q', 95500], ['UCyb-cllCkMREr9de-hoiDrg', 87100], ['UCUZ5AlC3rTlM-rA2cj5RP6w', 86900], ['UCMzxQ58QL4NNbWghGymtHvw', 82500], ['UCju7v8SkoWUQ5ITCQwmYpYg', 73600], ['UCAZ_LA7f0sjuZ1Ni8L2uITw', 67000], ['UCmM5LprTu6-mSlIiRNkiXYg', 64100], ['UCKUcnaLsG2DeQqza8zRXHiA', 59200], ['UCcd4MSYH7bPIBEUqmBgSZQw', 4160], ['UCSlcMof1GIPvH6H_VcknCbQ', 4150], ['UCtM5G3bS7zM8bv6p-OwoNTw', 4140]]
+    chid_subsc_list = get_subscribers(youtube=youtube, chids=chids)
 
     # output logs of the number of subscribers
     output_log(datetime_now, chid_subsc_list, chinfo=chinfo)
@@ -133,8 +149,8 @@ def main():
                 )
         exit(1)
 
-        tweet_id = statuses_update("")
-        statuses_update("", tweet_id)
+        tweet_id = update(twitter=twitter, status="")
+        update(twitter=twitter, status="", tweet_id=tweet_id)
     elif tweet_type == "image":
         table = []
         for chid, subsc in chid_subsc_list:
@@ -191,8 +207,8 @@ def main():
 
         # upload an image and tweet
         with open("table.png", "rb") as media:
-            media_ids = media_upload(media=media)
-        statuses_update(status=timestamp, media_ids=media_ids)
+            media_ids = upload(twitter=twitter, media=media)
+        update(twitter=twitter, status=timestamp, media_ids=media_ids)
         os.remove("table.png")
     else:
         raise RuntimeError(f"tweet_type \"{tweet_type}\" is not supported.")

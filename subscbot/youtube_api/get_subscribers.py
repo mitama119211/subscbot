@@ -1,22 +1,28 @@
+"""Get the number of subscribers."""
 from operator import itemgetter
 
-import pandas as pd
-
-from googleapiclient.errors import HttpError
-
-from subscbot.api_auth import youtube
+import googleapiclient
 
 
-def get_subscribers(chids):
+def get_subscribers(
+    youtube: googleapiclient.discovery.Resource,
+    chids: str
+):
+    """Get the number of subscribers.
+
+    Args:
+        youtube (googleapiclient.discovery.Resource): Sesstion instance.
+        chids (str): Youtube channel IDs.
+
+    Return:
+        chid_subsc_list (list): 2D-list including ["chid", "subscribers"]
+    """
     channels_response = youtube.channels().list(
                                           part="id,snippet,statistics",
                                           id=chids
                                          ).execute()
-    try:
-        items = channels_response.get("items", [])
-    except HttpError as e:
-        print("An HTTP error {:d} occurred:\n{:s}".format(e.resp.status,
-                                                          e.content))
+
+    items = channels_response.get("items", [])
 
     chid_subsc_list = []
     for item in items:

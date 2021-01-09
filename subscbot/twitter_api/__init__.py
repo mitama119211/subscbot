@@ -1,3 +1,3 @@
-from .media_upload import * # NOQA
+from .media import * # NOQA
 from .oauth import * # NOQA
-from .statuses_update import * # NOQA
+from .statuses import * # NOQA
