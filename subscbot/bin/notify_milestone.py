@@ -1,4 +1,4 @@
-"""CHeck and notify milestones."""
+"""Check and notify milestones."""
 import argparse
 import datetime
 import os
