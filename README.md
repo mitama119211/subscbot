@@ -18,8 +18,8 @@ Youtubeチャンネル登録者数を取得しツイートする．
 ## 事前に必要なもの
 
 - Twitter Developerアカウントとそのアプリ
-  - Access token
-  - Access token secret
+  - API key
+  - API key secret
 - Youtube Data API v3のAPIキー
 
 ## セットアップ
