@@ -1,0 +1,15 @@
+# API keys setting
+api_keys:
+  API_KEY: ""
+  API_KEY_SECRET: ""
+  ACCESS_TOKEN: ""
+  ACCESS_TOKEN_SECRET: ""
+  DEVELOPER_KEY: ""
+
+# tweet setting
+chinfo: "chinfo.csv"
+log_root_path: "subscribers_log"
+tweet_type: "image"
+mslog_root_path: "milestone_log"
+MILESTONE_L: 10000
+MILESTONE_S: 1000

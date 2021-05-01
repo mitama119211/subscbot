@@ -1,5 +1,9 @@
 """Statuses module."""
 import json
+import requests
+import sys
+
+from logging import getLogger
 
 import requests_oauthlib
 
@@ -24,15 +28,21 @@ def update(
     Reference:
         https://developer.twitter.com/en/docs/twitter-api/v1/tweets/post-and-engage/api-reference/post-statuses-update
     """
+    # set logger
+    logger = getLogger(__name__)
+
     resource_url = "https://api.twitter.com/1.1/statuses/update.json"
 
     params = {"status": status, "in_reply_to_status_id": in_reply_to_status_id, "media_ids": media_ids}
 
     response = twitter.post(resource_url, params=params)
 
-    if response.status_code == 200:
-        res_text = json.loads(response.text)
-
-        return res_text["id"]
-    else:
+    try:
         response.raise_for_status()
+    except requests.exceptions.RequestException as e:
+        logger.error(e)
+        sys.exit(1)
+
+    res_text = json.loads(response.text)
+
+    return res_text["id"]

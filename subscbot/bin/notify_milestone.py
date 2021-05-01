@@ -2,8 +2,13 @@
 import argparse
 import datetime
 import os
+import sys
+
+from logging import basicConfig
+from logging import getLogger
 
 import pandas as pd
+import yaml
 
 from apiclient.discovery import build
 from requests_oauthlib import OAuth1Session
@@ -11,11 +16,8 @@ from requests_oauthlib import OAuth1Session
 from subscbot.twitter_api import update
 from subscbot.youtube_api import get_subscribers
 
-MILESTONE_L = 10000
-MILESTONE_S = 1000
 
-
-def check_notified(chid_subsc_list, chinfo):
+def check_notified(chid_subsc_list, chinfo, MILESTONE_L=10000):
     """Notify when one has less than 100 people left to reach MILESTONE_L."""
     """NOTE: Is this function needed?"""
     notifiedlog_filename = "notified.log"
@@ -45,7 +47,7 @@ def check_notified(chid_subsc_list, chinfo):
     return notified_list
 
 
-def check_milestone(chid_subsc_list, chinfo):
+def check_milestone(chid_subsc_list, chinfo, MILESTONE_S=1000):
     """Check whether the number of subscribers exceeds the milestone number."""
     mslog_filename = "milestone.log"
 
@@ -73,10 +75,10 @@ def check_milestone(chid_subsc_list, chinfo):
 def get_arguments():
     """Get arguments."""
     parser = argparse.ArgumentParser(description="CHeck and notify milestones.")
-    parser.add_argument("--chinfo", type=str, required=True,
-                        help="A csv file including channnel infomation.")
-    parser.add_argument("--mslog_root_path", type=str, default="milestone_log",
-                        help="Path to log directory to save the milestone number.")
+    parser.add_argument("--conf", type=str, default="conf/config.yaml",
+                        help="Path to a config file with API keys.")
+    parser.add_argument("--verbose", type=int, default=1,
+                        help="Logging level.")
 
     return parser.parse_args()
 
@@ -86,43 +88,76 @@ def main():
     # get arguments
     args = get_arguments()
 
+    # set logger
+    if args.verbose > 1:
+        from logging import DEBUG
+        basicConfig(
+            level=DEBUG, stream=sys.stdout,
+            format="%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s")
+    elif args.verbose == 1:
+        from logging import INFO
+        basicConfig(
+            level=INFO, stream=sys.stdout,
+            format="%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s")
+    else:
+        from logging import WARN
+        basicConfig(
+            level=WARN, stream=sys.stdout,
+            format="%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s")
+    logger = getLogger(__name__)
+
+    # load config
+    with open(args.conf, mode="r") as f:
+        config = yaml.load(f, Loader=yaml.SafeLoader)
+
+    # get API keys
+    api_keys = config.get("api_keys", "")
+    try:
+        DEVELOPER_KEY = api_keys["DEVELOPER_KEY"]
+        API_KEY = api_keys["API_KEY"]
+        API_KEY_SECRET = api_keys["API_KEY_SECRET"]
+        ACCESS_TOKEN = api_keys["ACCESS_TOKEN"]
+        ACCESS_TOKEN_SECRET = api_keys["ACCESS_TOKEN_SECRET"]
+    except KeyError:
+        logger.error("API keys must be specified.")
+        sys.exit(1)
+    if not all(api_keys.values()):
+        logger.error("API keys must be specified.")
+        sys.exit(1)
+
     # load channel info
     # chinfo: (chid, name, dirname)
-    chinfo = pd.read_csv(args.chinfo)
+    chinfo = pd.read_csv(config["chinfo"])
 
     # check log dirctory existance
-    mslog_root_path = args.mslog_root_path
+    mslog_root_path = config.get("mslog_root_path", "milestone_log")
     if not os.path.exists(mslog_root_path):
         os.makedirs(mslog_root_path)
+        logger.info(f"Create {mslog_root_path}")
     mslog_path_list = [os.path.join(mslog_root_path, dirname) for dirname in chinfo["dirname"]]
     chinfo["mslog_path"] = mslog_path_list
     for mslog_path in mslog_path_list:
         if not os.path.exists(mslog_path):
             os.mkdir(mslog_path)
+            logger.info(f"Create {mslog_path}")
 
     # get current time
     datetime_now = datetime.datetime.now()
     # set timestamp (YYYY-MM-DD_hh:mm:ss)
     timestamp = datetime_now.strftime("%Y-%m-%d_%H:%M:%S")
 
-    # Launch a session
+    # launch a session
     YOUTUBE_API_SERVICE_NAME = "youtube"
     YOUTUBE_API_VERSION = "v3"
-    DEVELOPER_KEY = os.environ.get("DEVELOPER_KEY")
-    youtube = build(YOUTUBE_API_SERVICE_NAME, YOUTUBE_API_VERSION, developerKey=DEVELOPER_KEY)
-
-    API_KEY = os.environ.get("API_KEY")
-    API_KEY_SECRET = os.environ.get("API_KEY_SECRET")
-    ACCESS_TOKEN = os.environ.get("ACCESS_TOKEN")
-    ACCESS_TOKEN_SECRET = os.environ.get("ACCESS_TOKEN_SECRET")
+    youtube = build(YOUTUBE_API_SERVICE_NAME, YOUTUBE_API_VERSION, developerKey=DEVELOPER_KEY, cache_discovery=False)
     twitter = OAuth1Session(API_KEY, API_KEY_SECRET, ACCESS_TOKEN, ACCESS_TOKEN_SECRET)
 
     # get the number of subscribers
     chids = ",".join(chinfo["chid"])
     chid_subsc_list = get_subscribers(youtube=youtube, chids=chids)
 
-    notified_list = check_notified(chid_subsc_list, chinfo=chinfo)
-    milestone_list = check_milestone(chid_subsc_list, chinfo=chinfo)
+    notified_list = check_notified(chid_subsc_list, chinfo=chinfo, MILESTONE_L=config.get("MILESTONE_L", 10000))
+    milestone_list = check_milestone(chid_subsc_list, chinfo=chinfo, MILESTONE_S=config.get("MILESTONE_S", 1000))
 
     status_list = []
     for chid, next_criterion, diff in notified_list:
@@ -138,6 +173,7 @@ def main():
         status_list.append(status)
     for status in status_list:
         update(twitter=twitter, status=status)
+        logger.debug(status)
 
 
 if __name__ == "__main__":
