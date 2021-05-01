@@ -2,10 +2,15 @@
 import argparse
 import datetime
 import os
+import sys
+
+from logging import basicConfig
+from logging import getLogger
 
 import japanize_matplotlib
 import matplotlib.pyplot as plt
 import pandas as pd
+import yaml
 
 from apiclient.discovery import build
 from requests_oauthlib import OAuth1Session
@@ -37,12 +42,8 @@ def output_log(datetime_now, chid_subsc_list, chinfo):
                 f.write(log)
 
 
-def check_prev_subsc(chid_subsc_list, chinfo):
+def check_prev_subsc(chid_subsc_list, chinfo, prevlog_filename="prev_subscribers.log"):
     """Check the previous log."""
-    # set previous log file name
-    # FIXME: avoid hard-coding
-    prevlog_filename = "prev_subscribers.log"
-
     prev_subsc_dict = dict()
     for chid, subscribers in chid_subsc_list:
         # NOTE: not sophisticated
@@ -68,12 +69,12 @@ def form_name(name, nmax=8):
 def get_arguments():
     """Get arguments."""
     parser = argparse.ArgumentParser(description="Tweet the number of subscribers with text or an image.")
-    parser.add_argument("--chinfo", type=str, required=True,
-                        help="A csv file including channnel infomation.")
-    parser.add_argument("--log_root_path", type=str, default="subscribers_log",
-                        help="Path to log directory to save the number of subscribers.")
-    parser.add_argument("--tweet_type", type=str, required=True, choices=["text", "image"],
-                        help="How to tweeet.")
+    parser.add_argument("--conf", type=str, default="conf/config.yaml",
+                        help="Path to a config file with API keys.")
+    parser.add_argument("--tweet_type", type=str, default="",
+                        help="How to tweet.")
+    parser.add_argument("--verbose", type=int, default=1,
+                        help="Logging level.")
 
     return parser.parse_args()
 
@@ -83,35 +84,68 @@ def main():
     # get arguments
     args = get_arguments()
 
+    # set logger
+    if args.verbose > 1:
+        from logging import DEBUG
+        basicConfig(
+            level=DEBUG, stream=sys.stdout,
+            format="%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s")
+    elif args.verbose == 1:
+        from logging import INFO
+        basicConfig(
+            level=INFO, stream=sys.stdout,
+            format="%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s")
+    else:
+        from logging import WARN
+        basicConfig(
+            level=WARN, stream=sys.stdout,
+            format="%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s")
+    logger = getLogger(__name__)
+
+    # load config
+    with open(args.conf, mode="r") as f:
+        config = yaml.load(f, Loader=yaml.SafeLoader)
+
+    # get API keys
+    api_keys = config.get("api_keys", "")
+    try:
+        DEVELOPER_KEY = api_keys["DEVELOPER_KEY"]
+        API_KEY = api_keys["API_KEY"]
+        API_KEY_SECRET = api_keys["API_KEY_SECRET"]
+        ACCESS_TOKEN = api_keys["ACCESS_TOKEN"]
+        ACCESS_TOKEN_SECRET = api_keys["ACCESS_TOKEN_SECRET"]
+    except KeyError:
+        logger.error("API keys must be specified.")
+        sys.exit(1)
+    if not all(api_keys.values()):
+        logger.error("API keys must be specified.")
+        sys.exit(1)
+
     # load channel info
     # chinfo: (chid, name, dirname)
-    chinfo = pd.read_csv(args.chinfo)
+    chinfo = pd.read_csv(config["chinfo"])
 
     # check log dirctory existance
-    log_root_path = args.log_root_path
+    log_root_path = config.get("log_root_path", "subscribers_log")
     if not os.path.exists(log_root_path):
         os.makedirs(log_root_path)
+        logger.info(f"Create {log_root_path}")
     log_path_list = [os.path.join(log_root_path, dirname) for dirname in chinfo["dirname"]]
     chinfo["log_path"] = log_path_list
     for log_path in log_path_list:
         if not os.path.exists(log_path):
             os.mkdir(log_path)
+            logger.info(f"Create {log_path}")
 
     # get current time
     datetime_now = datetime.datetime.now()
     # set timestamp (YYYY-MM-DD_hh:mm:ss)
     timestamp = datetime_now.strftime("%Y-%m-%d_%H:%M:%S")
 
-    # Launch a session
+    # launch a session
     YOUTUBE_API_SERVICE_NAME = "youtube"
     YOUTUBE_API_VERSION = "v3"
-    DEVELOPER_KEY = os.environ.get("DEVELOPER_KEY")
-    youtube = build(YOUTUBE_API_SERVICE_NAME, YOUTUBE_API_VERSION, developerKey=DEVELOPER_KEY)
-
-    API_KEY = os.environ.get("API_KEY")
-    API_KEY_SECRET = os.environ.get("API_KEY_SECRET")
-    ACCESS_TOKEN = os.environ.get("ACCESS_TOKEN")
-    ACCESS_TOKEN_SECRET = os.environ.get("ACCESS_TOKEN_SECRET")
+    youtube = build(YOUTUBE_API_SERVICE_NAME, YOUTUBE_API_VERSION, developerKey=DEVELOPER_KEY, cache_discovery=False)
     twitter = OAuth1Session(API_KEY, API_KEY_SECRET, ACCESS_TOKEN, ACCESS_TOKEN_SECRET)
 
     # get the number of subscribers
@@ -122,7 +156,7 @@ def main():
     output_log(datetime_now, chid_subsc_list, chinfo=chinfo)
 
     # tweet the number of subscribers
-    tweet_type = args.tweet_type
+    tweet_type = config.get("tweet_type", "image") if not args.tweet_type else args.tweet_type
     prev_subsc_dict = check_prev_subsc(chid_subsc_list, chinfo=chinfo)
     # FIXME: "text" doesn't work
     #        status_list should be divided considering the word limit.
@@ -171,6 +205,7 @@ def main():
                 table.append(
                     [f"{name:s}", f"{subsc:,d}", "-"]
                 )
+        logger.debug(table)
         # NOTE: japanize_matplotlib is used for matplotlib to display japanese,
         #       but it might be better to set fonts on my own.
         #       reference: https://github.com/uehara1414/japanize-matplotlib
@@ -211,7 +246,8 @@ def main():
         update(twitter=twitter, status=timestamp, media_ids=media_ids)
         os.remove("table.png")
     else:
-        raise RuntimeError(f"tweet_type \"{tweet_type}\" is not supported.")
+        logger.error(f"tweet_type \"{tweet_type}\" is not supported.")
+        sys.exit(1)
 
 
 if __name__ == "__main__":

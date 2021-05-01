@@ -1,23 +1,21 @@
 #!/usr/bin/env bash
 
 # shellcheck disable=SC1091
-. ./set_apikeys.sh || exit 1;
 . ./activate_env.sh || exit 1;
 
+conf="conf/config.yaml"
 oauth_callback=""
+verbose=1
 
 . ./parse_options.sh || exit 1;
 
-if [ -z "${oauth_callback}" ]; then
-    echo "Usage: ./authenticate.sh --oauth_callback OAUTH_CALLBACK"
-    echo "Please specify --oauth_callback"
-    exit 1
-fi
-
-if [ -n "${API_KEY}" ] && [ -n "${API_KEY_SECRET}" ] &&[ -n "${DEVELOPER_KEY}" ]; then
+if [ -n "${oauth_callback}" ]; then
     python -m subscbot.bin.authenticate \
-        --oauth_callback "${oauth_callback}"
+        --conf "${conf}" \
+        --oauth_callback "${oauth_callback}" \
+        --verbose "${verbose}"
 else
-    echo "Please set API_KEY, API_KEY_SECRET and DEVELOPER_KEY in \"set_apikeys.sh\"."
+    echo "Usage: ./authenticate.sh --oauth_callback <oauth_callback>"
+    echo "Please specify --oauth_callback"
     exit 1
 fi
