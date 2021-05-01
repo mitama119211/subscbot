@@ -20,7 +20,7 @@ if LooseVersion(pip.__version__) < LooseVersion("19"):
 
 install_requires = open("requirements.txt").read().splitlines()
 setup_requires = ["pytest-runner"]
-tests_requires = ["pytest", "hacking", "flake8-docstring"]
+tests_requires = ["pytest", "hacking", "flake8-docstrings"]
 
 setup(
     name="subscbot",
