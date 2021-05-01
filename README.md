@@ -10,6 +10,8 @@ Youtubeチャンネル登録者数を取得しツイートする．
 大幅に変更．tweet_subscribersのデフォルトを画像ツイートに．
 - ver 2.1
 一部の仕様を変更．ドキュメントなどを追記．
+- ver 2.2
+API keyなどの設定をyamlフォーマットのファイルで管理するように変更．
 
 ## 動作環境
 
@@ -51,13 +53,13 @@ Youtubeチャンネル登録者数を取得しツイートする．
 
 3. API_KEY，API_KEY_SECRET，DEVELOPER_KEYを設定
 
-    `set_apikeys.sh`の`API_KEY=""`，`API_KEY_SECRET=""`にTwitter Developerアカウントで作成したアプリのAPI key，API key secretをそれぞれ記述．
+    `conf/config.yaml`の`API_KEY=""`，`API_KEY_SECRET=""`にTwitter Developerアカウントで作成したアプリのAPI key，API key secretをそれぞれ記述．
     また，`DEVELOPER_KEY=""`にYoutube Data API v3のAPIキーを記述．
 
 4. authenticate.shを実行し，ACCESS_TOKEN，ACCESS_TOKEN_SECRETを取得
   
 5. ACCESS_TOKEN，ACCESS_TOKEN_SECRETを設定
-    `set_apikeys.sh`の`ACCESS_TOKEN=""`，`ACCESS_TOKEN_SECRET=""`に取得した値をそれぞれ記述．
+    `conf/config.yaml`の`ACCESS_TOKEN=""`，`ACCESS_TOKEN_SECRET=""`に取得した値をそれぞれ記述．
 
 ## Reference
 
