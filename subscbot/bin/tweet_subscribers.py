@@ -212,7 +212,7 @@ def main():
         japanize_matplotlib.japanize()
 
         # generate a table image
-        fig, ax = plt.subplots(1, 1)
+        fig, ax = plt.subplots(1, 1, figsize=(4.0, 4.0))
         ax.axis("off")
         ax.axis("tight")
         colors = [['#D8D8D8' for _ in row] if i % 2 == 1 else ["w" for _ in row] for i, row in enumerate(table)]
@@ -225,6 +225,9 @@ def main():
             )
 
         # table settings
+        # Reference:
+        #   https://matplotlib.org/stable/api/table_api.html#matplotlib.table.Table
+        #   https://matplotlib.org/stable/api/table_api.html#matplotlib.table.Cell
         table.auto_set_font_size(False)
         for key, cell in table.get_celld().items():
             row, column = key
@@ -233,9 +236,9 @@ def main():
                 cell.set_text_props(color='w')
             elif row > 0:
                 cell.set_text_props(horizontalalignment="center")
-            cell.set_width(0.6*cell.get_width())
+            cell.set_width(0.8*cell.get_width())
             cell.set_height(1.2*cell.get_height())
-
+        table.auto_set_column_width([0])
         plt.tight_layout()
         plt.savefig("table.png", format="png", dpi=400)
         plt.close()
